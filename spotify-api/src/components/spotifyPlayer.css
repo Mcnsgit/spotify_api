@@ -25,3 +25,12 @@
     border-radius: 5px;
     cursor: pointer;
   }
+  
+  .controls button:hover {
+    background-color: #1ed760;
+  }
+
+.visualiser {
+  display: contents
+}
+ 

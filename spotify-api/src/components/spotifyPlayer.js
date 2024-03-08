@@ -1,3 +1,4 @@
+// src/components/spotifyPlayer.js
 import React from 'react';
 import { useSpotifyPlayer } from './spotifyPlayerContex';
 import { Button, Form } from 'react-bootstrap';
@@ -11,36 +12,41 @@ const SpotifyPlayer = () => {
   };
 
   return (
-    <div className="d-flex flex-column align-items-center mt-3">
-    {playbackState && (
-      <div>
-        <img src={playbackState.track_window.current_track.album.images[0].url} alt="Album Art" style={{ width: '200px', height: '200px' }} />
-        <h3>{playbackState.track_window.current_track.name}</h3>
-        <p>{playbackState.track_window.current_track.artists[0].name}</p>
-        <div className="progress-bar-container">
+    <div className="flex flex-col items-center mt-8">
+      {playbackState && (
+        <div className="mb-4">
+          <img
+            src={playbackState.track_window.current_track.album.images[0].url}
+            alt="Album Art"
+            className="w-48 h-48 rounded-lg shadow-md"
+          />
+          <h3 className="text-xl font-bold mt-2">{playbackState.track_window.current_track.name}</h3>
+          <p className="text-gray-600">{playbackState.track_window.current_track.artists[0].name}</p>
+          <div className="w-full bg-gray-200 rounded-full h-1 mt-4">
             <div
-              className="progress-bar"
+              className="bg-red-500 h-1 rounded-full"
               style={{
                 width: `${(playbackState.position / playbackState.duration) * 100}%`,
               }}
-            />
+            ></div>
           </div>
         </div>
-    )}
-    <div className="d-flex justify-content-center mt-3">
-      <Button variant="outline-secondary" onClick={previousTrack}>
-        Previous
-      </Button>
-      <Button variant="outline-secondary" onClick={pauseTrack} className="mx-2">
-        Pause
-      </Button>
-      <Button variant="outline-secondary" onClick={resumeTrack} className="mx-2">
-        Resume
-      </Button>
-      <Button variant="outline-secondary" onClick={nextTrack}>
-        Next
-      </Button>
-      <Form.Group controlId="formBasicRange" className="ml-3">
+      )}
+      <div className="flex justify-center space-x-4">
+        <Button variant="outline-secondary" onClick={previousTrack}>
+          Previous
+        </Button>
+        <Button variant="outline-secondary" onClick={pauseTrack}>
+          Pause
+        </Button>
+        <Button variant="outline-secondary" onClick={resumeTrack}>
+          Resume
+        </Button>
+        <Button variant="outline-secondary" onClick={nextTrack}>
+          Next
+        </Button>
+      </div>
+      <Form.Group controlId="formBasicRange" className="mt-4">
         <Form.Label>Volume</Form.Label>
         <Form.Control
           type="range"
@@ -49,9 +55,9 @@ const SpotifyPlayer = () => {
           step={0.01}
           value={volume}
           onChange={handleVolumeChange}
+          className="w-48"
         />
       </Form.Group>
-    </div>
     </div>
   );
 };
