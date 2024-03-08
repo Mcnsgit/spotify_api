@@ -1,0 +1,27 @@
+/* spotifyPlayer.css */
+.spotify-player {
+    margin-top: 20px;
+    padding: 20px;
+    background-color: #f0f0f0;
+    border-radius: 5px;
+  }
+  
+  .spotify-player h2 {
+    margin-bottom: 10px;
+  }
+  
+  .controls {
+    display: flex;
+    justify-content: center;
+  }
+  
+  .controls button {
+    margin: 0 5px;
+    padding: 8px 16px;
+    font-size: 16px;
+    background-color: #1db954;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
