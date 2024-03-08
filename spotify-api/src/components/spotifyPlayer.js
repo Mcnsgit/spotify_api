@@ -1,145 +1,59 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import './spotifyPlayer.css';
-import SearchComponent from './searchComponent';
-
-const SpotifyPlayerContext = createContext();
-
-export const useSpotifyPlayer = () => useContext(SpotifyPlayerContext);
-
-const SpotifyPlayerProvider = ({ accessToken, children }) => {
-  const [player, setPlayer] = useState(null);
-  const [deviceId, setDeviceId] = useState(null);
-
-  useEffect(() => {
-    if (!accessToken) return;
-
-    const script = document.createElement('script');
-    script.src = 'https://sdk.scdn.co/spotify-player.js';
-    document.body.appendChild(script);
-
-    window.onSpotifyWebPlaybackSDKReady = () => {
-      const spotifyPlayer = new window.Spotify.Player({
-        name: 'Your App Name',
-        getOAuthToken: cb => { cb(accessToken); },
-      });
-
-      spotifyPlayer.addListener('ready', ({ device_id }) => {
-        console.log('Ready with Device ID', device_id);
-        setDeviceId(device_id);
-      });
-
-      spotifyPlayer.addListener('not_ready', ({ device_id }) => {
-        console.log('Device ID has gone offline', device_id);
-      });
-
-      const eventListeners = [
-        { event: 'initialization_error', action: ({ message }) => console.error(message) },
-        { event: 'authentication_error', action: ({ message }) => console.error(message) },
-        { event: 'account_error', action: ({ message }) => console.error(message) },
-        { event: 'playback_error', action: ({ message }) => console.error(message) },
-        { event: 'player_state_changed', action: state => console.log(state) },
-        { event: 'ready', action: ({ device_id }) => console.log('Ready with Device ID', device_id) },
-      ];
-
-      eventListeners.forEach(({ event, action }) => spotifyPlayer.addListener(event, action));
-
-      spotifyPlayer.connect().then(success => {
-        if (success) {
-          console.log('The Web Playback SDK successfully connected to Spotify!');
-          setPlayer(spotifyPlayer);
-        }
-      });
-    };
-
-    return () => {
-      player?.disconnect();
-    };
-  }, [accessToken]);
-
-  const playTrack = async (trackUri) => {
-    if (!deviceId || !accessToken) return;
-
-    await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
-      method: 'PUT',
-      body: JSON.stringify({ uris: [trackUri] }),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${accessToken}`,
-      },
-    });
-  };
-
-  const pauseTrack = async () => {
-    if (!deviceId || !accessToken) return;
-
-    await fetch(`https://api.spotify.com/v1/me/player/pause?device_id=${deviceId}`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-      },
-    });
-  };
-
-  const nextTrack = async () => {
-    if (!deviceId || !accessToken) return;
-
-    await fetch(`https://api.spotify.com/v1/me/player/next?device_id=${deviceId}`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-      },
-    });
-  };
-
-  const previousTrack = async () => {
-    if (!deviceId || !accessToken) return;
-
-    await fetch(`https://api.spotify.com/v1/me/player/previous?device_id=${deviceId}`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-      },
-    });
-  };
-
-  return (
-    <SpotifyPlayerContext.Provider value={{ playTrack, pauseTrack, nextTrack, previousTrack }}>
-      {children}
-    </SpotifyPlayerContext.Provider>
-  );
-};
+import React from 'react';
+import { useSpotifyPlayer } from './spotifyPlayerContex';
+import { Button, Form } from 'react-bootstrap';
 
 const SpotifyPlayer = () => {
-  const { playTrack, pauseTrack, nextTrack, previousTrack } = useSpotifyPlayer();
+  const { pauseTrack, nextTrack, previousTrack, resumeTrack, volume, setPlaybackVolume, playbackState } = useSpotifyPlayer();
 
-  const handlePlayClick = () => {
-    playTrack('spotify:track:1301WleyT98MSxVHPZCA6M'); // Replace with the desired track URI
-  };
-
-  const handlePauseClick = () => {
-    pauseTrack();
-  };
-
-  const handleNextClick = () => {
-    nextTrack();
-  };
-
-  const handlePreviousClick = () => {
-    previousTrack();
+  const handleVolumeChange = (event) => {
+    const newVolume = parseFloat(event.target.value);
+    setPlaybackVolume(newVolume);
   };
 
   return (
-    <div className="spotify-player">
-      <h2>Spotify Player</h2>
-      <SearchComponent />
-      <div className="controls">
-        <button onClick={handlePreviousClick}>Previous</button>
-        <button onClick={handlePlayClick}>Play</button>
-        <button onClick={handlePauseClick}>Pause</button>
-        <button onClick={handleNextClick}>Next</button>
-      </div>
+    <div className="d-flex flex-column align-items-center mt-3">
+    {playbackState && (
+      <div>
+        <img src={playbackState.track_window.current_track.album.images[0].url} alt="Album Art" style={{ width: '200px', height: '200px' }} />
+        <h3>{playbackState.track_window.current_track.name}</h3>
+        <p>{playbackState.track_window.current_track.artists[0].name}</p>
+        <div className="progress-bar-container">
+            <div
+              className="progress-bar"
+              style={{
+                width: `${(playbackState.position / playbackState.duration) * 100}%`,
+              }}
+            />
+          </div>
+        </div>
+    )}
+    <div className="d-flex justify-content-center mt-3">
+      <Button variant="outline-secondary" onClick={previousTrack}>
+        Previous
+      </Button>
+      <Button variant="outline-secondary" onClick={pauseTrack} className="mx-2">
+        Pause
+      </Button>
+      <Button variant="outline-secondary" onClick={resumeTrack} className="mx-2">
+        Resume
+      </Button>
+      <Button variant="outline-secondary" onClick={nextTrack}>
+        Next
+      </Button>
+      <Form.Group controlId="formBasicRange" className="ml-3">
+        <Form.Label>Volume</Form.Label>
+        <Form.Control
+          type="range"
+          min={0}
+          max={1}
+          step={0.01}
+          value={volume}
+          onChange={handleVolumeChange}
+        />
+      </Form.Group>
+    </div>
     </div>
   );
 };
 
-export default SpotifyPlayerProvider;
+export default SpotifyPlayer;

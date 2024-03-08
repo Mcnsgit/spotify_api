@@ -3,11 +3,10 @@ import React, { useEffect, useState } from 'react';
 import Dashboard from './components/dashboard';
 import Login from './login';
 import useSpotifyApi from './auth/useSpotifyApi';
-import SpotifyPlayer from './components/searchComponent.js';
-import { SpotifyPlayerProvider } from './components/spotifyPlayerContex.js';
+import SpotifyPlayer from './components/spotifyPlayer';
+import { SpotifyPlayerProvider } from './components/spotifyPlayerContex';
 
 const App = () => {
-  
   const accessToken = localStorage.getItem('accessToken');
   const { callApi } = useSpotifyApi();
   const [token, setToken] = useState(localStorage.getItem('accessToken'));
@@ -25,9 +24,9 @@ const App = () => {
 
   return (
     <div className="App">
-      {token ? <Dashboard /> : <Login />}
       <SpotifyPlayerProvider accessToken={accessToken}>
-        {accessToken && <SpotifyPlayer accessToken={accessToken} />}
+        {token ? <Dashboard /> : <Login />}
+        {accessToken && <SpotifyPlayer />}
       </SpotifyPlayerProvider>
     </div>
   );

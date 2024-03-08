@@ -1,17 +1,22 @@
+// src/components/SearchComponent.js
 import React, { useState } from 'react';
-import { useSpotifyPlayer } from './spotifyPlayerContex.js';
-import useSpotifyApi from '../auth/useSpotifyApi';
+import { useSpotifyPlayer } from './spotifyPlayerContex';
+import { Form, Button, ListGroup } from 'react-bootstrap';
 
 const SearchComponent = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
-  const { callApi } = useSpotifyApi();
   const { playTrack } = useSpotifyPlayer();
 
   const handleSearch = async () => {
     try {
-      const response = await callApi(`search?q=${encodeURIComponent(searchQuery)}&type=track`);
-      setSearchResults(response.tracks.items);
+      const response = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(searchQuery)}&type=track`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+        },
+      });
+      const data = await response.json();
+      setSearchResults(data.tracks?.items || []);
     } catch (error) {
       console.error('Error searching tracks:', error);
     }
@@ -23,21 +28,29 @@ const SearchComponent = () => {
 
   return (
     <div>
-      <input
-        type="text"
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-        placeholder="Search tracks"
-      />
-      <button onClick={handleSearch}>Search</button>
-      <ul>
+      <Form onSubmit={(e) => { e.preventDefault(); handleSearch(); }}>
+        <Form.Group controlId="searchInput">
+          <Form.Control
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search tracks"
+          />
+        </Form.Group>
+        <Button variant="primary" type="submit">
+          Search
+        </Button>
+      </Form>
+      <ListGroup>
         {searchResults.map((track) => (
-          <li key={track.id}>
+          <ListGroup.Item key={track.id}>
             {track.name} - {track.artists[0].name}
-            <button onClick={() => handlePlayTrack(track.uri)}>Play</button>
-          </li>
+            <Button variant="link" onClick={() => handlePlayTrack(track.uri)}>
+              Play
+            </Button>
+          </ListGroup.Item>
         ))}
-      </ul>
+      </ListGroup>
     </div>
   );
 };

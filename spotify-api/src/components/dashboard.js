@@ -1,8 +1,12 @@
+// src/components/Dashboard.js
 import React, { useEffect, useState } from 'react';
 import useSpotifyApi from '../auth/useSpotifyApi';
+import SpotifyPlayer from './spotifyPlayer';
+import SearchComponent from './searchComponent';
+import { Container, Row, Col } from 'react-bootstrap';
 
 const Dashboard = () => {
-  const { callApi } = useSpotifyApi();
+  const { callApi, requestPlaybackPermissions } = useSpotifyApi();
   const [userProfile, setUserProfile] = useState(null);
 
   useEffect(() => {
@@ -13,15 +17,35 @@ const Dashboard = () => {
     fetchData();
   }, [callApi]);
 
+  useEffect(() => {
+    if (userProfile && !userProfile.product === 'premium') {
+      requestPlaybackPermissions();
+    }
+  }, [userProfile, requestPlaybackPermissions]);
+
   return (
-    <div>
-      <h1>User Dashboard</h1>
-      {userProfile && (
-        <div>
-          <p>Welcome, {userProfile.display_name}</p>
-        </div>
-      )}
-    </div>
+    <Container>
+      <Row>
+        <Col>
+          <h1>User Dashboard</h1>
+          {userProfile && (
+            <div>
+              <p>Welcome, {userProfile.display_name}</p>
+            </div>
+          )}
+        </Col>
+      </Row>
+      <Row>
+        <Col>
+          <SearchComponent />
+        </Col>
+      </Row>
+      <Row>
+        <Col>
+          <SpotifyPlayer />
+        </Col>
+      </Row>
+    </Container>
   );
 };
 

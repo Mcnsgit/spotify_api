@@ -81,14 +81,20 @@ const useSpotifyApi = () => {
       }
     };
 
+
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get('code');
     if (code && !accessToken) {
       exchangeCodeForToken(code);
     }
   }, [accessToken, clientId, clientSecret, redirectUri]);
+  const requestPlaybackPermissions = useCallback(async () => {
+    const scopes = 'streaming user-read-email user-read-private';
+    const redirectUrl = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes)}`;
+    window.location.href = redirectUrl;
+  }, [clientId, redirectUri]);
 
-  return { callApi };
+  return { callApi, requestPlaybackPermissions };
 };
 
 export default useSpotifyApi;
