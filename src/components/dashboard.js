@@ -1,4 +1,3 @@
-// src/components/Dashboard.js
 import React, { useEffect, useState } from 'react';
 import useSpotifyApi from '../auth/useSpotifyApi';
 import SearchComponent from './searchComponent';
