@@ -1,0 +1,258 @@
+<html lang="en">
+
+<head>
+    <title>three.js - WebGPU - Audio Processing</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link type="text/css" rel="stylesheet" href="main.css">
+</head>
+
+<body>
+
+    <script type="importmap">
+			{
+                "imports": {
+                    "three": "https://unpkg.com/three/build/three.module.js",
+                    "three/addons/": "https://unpkg.com/three/examples/jsm/"
+                  }
+                }
+              </script>
+            
+              <script type="module">
+                import * as THREE from 'three';
+                import { MarchingCubes } from 'three/addons/objects/MarchingCubes.js';
+                import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { tslFn, uniform, storage, storageObject, instanceIndex, float, texture, viewportTopLeft, color } from 'three/nodes';
+
+        import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
+
+        import WebGPURenderer from 'three/addons/renderers/webgpu/WebGPURenderer.js';
+        import StorageInstancedBufferAttribute from 'three/addons/renderers/common/StorageInstancedBufferAttribute.js';
+
+        const container = containerRef.current;
+    let camera, scene, renderer;
+    let computeNode;
+    let waveBuffer, sampleRate;
+    let waveGPUBuffer;
+    let currentAudio, currentAnalyser;
+    const analyserBuffer = new Uint8Array(1024);
+    let analyserTexture;
+
+        init();
+
+        async function playAudioBuffer() {
+
+            if (currentAudio) currentAudio.stop();
+
+            // compute audio
+
+            await renderer.computeAsync(computeNode);
+
+            const waveArray = new Float32Array(await renderer.getArrayBufferAsync(waveGPUBuffer));
+
+            // play result
+
+            const audioOutputContext = new AudioContext({ sampleRate });
+            const audioOutputBuffer = audioOutputContext.createBuffer(1, waveArray.length, sampleRate);
+
+            audioOutputBuffer.copyToChannel(waveArray, 0);
+
+            const source = audioOutputContext.createBufferSource();
+            source.connect(audioOutputContext.destination);
+            source.buffer = audioOutputBuffer;
+            source.start();
+
+            currentAudio = source;
+
+            // visual feedback
+
+            currentAnalyser = audioOutputContext.createAnalyser();
+            currentAnalyser.fftSize = 2048;
+
+            source.connect(currentAnalyser);
+
+        }
+
+        async function init() {
+
+            if ( WebGPU.isAvailable() === false ) {
+
+             	document.body.appendChild( WebGPU.getErrorMessage() );
+
+             	throw new Error( 'No WebGPU support' );
+
+             }
+            const resolution = 28;
+            const effect = new MarchingCubes(resolution, materials.multiColors, true, true, 100000);
+            effect.position.set(0, 0, 0);
+            effect.scale.set(700, 700, 700);
+            effect.enableUvs = false;
+            effect.enableColors = true;
+            scene.add(effect);
+
+
+            // audio buffer
+
+            const soundBuffer = await fetch('sounds/webgpu-audio-processing.mp3').then(res => res.arrayBuffer());
+            const audioContext = new AudioContext();
+
+            const audioBuffer = await audioContext.decodeAudioData(soundBuffer);
+
+            waveBuffer = audioBuffer.getChannelData(0);
+
+            // adding extra silence to delay and pitch
+            waveBuffer = new Float32Array([...waveBuffer, ...new Float32Array(200000)]);
+
+            sampleRate = audioBuffer.sampleRate / audioBuffer.numberOfChannels;
+
+
+            // create webgpu buffers
+
+            waveGPUBuffer = new StorageInstancedBufferAttribute(waveBuffer, 1);
+
+            const waveStorageNode = storage(waveGPUBuffer, 'float', waveBuffer.length);
+
+
+            // read-only buffer
+
+            const waveNode = storageObject(new StorageInstancedBufferAttribute(waveBuffer, 1), 'float', waveBuffer.length);
+
+
+            // params
+
+            const pitch = uniform(1.5);
+            const delayVolume = uniform(.2);
+            const delayOffset = uniform(.55);
+
+
+            // compute (shader-node)
+
+            const computeShaderFn = tslFn(() => {
+
+                const index = float(instanceIndex);
+
+                // pitch
+
+                const time = index.mul(pitch);
+
+                let wave = waveNode.element(time);
+
+
+                // delay
+
+                for (let i = 1; i < 7; i++) {
+
+                    const waveOffset = waveNode.element(index.sub(delayOffset.mul(sampleRate).mul(i)).mul(pitch));
+                    const waveOffsetVolume = waveOffset.mul(delayVolume.div(i * i));
+
+                    wave = wave.add(waveOffsetVolume);
+
+                }
+
+
+                // store
+
+                const waveStorageElementNode = waveStorageNode.element(instanceIndex);
+
+                waveStorageElementNode.assign(wave);
+
+            });
+
+
+            // compute
+
+            computeNode = computeShaderFn().compute(waveBuffer.length);
+
+
+            // gui
+
+            const gui = new GUI();
+
+            gui.add(pitch, 'value', .5, 2, 0.01).name('pitch');
+            gui.add(delayVolume, 'value', 0, 1, .01).name('delayVolume');
+            gui.add(delayOffset, 'value', .1, 1, .01).name('delayOffset');
+
+
+            // renderer
+
+            const container = document.createElement('div');
+            document.body.appendChild(container);
+
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.01, 30);
+
+
+            // nodes
+
+            analyserTexture = new THREE.DataTexture(analyserBuffer, analyserBuffer.length, 1, THREE.RedFormat);
+
+            const spectrum = texture(analyserTexture, viewportTopLeft.x).x.mul(viewportTopLeft.y);
+            const backgroundNode = color(0x0000FF).mul(spectrum);
+
+
+            // scene
+
+            scene = new THREE.Scene();
+            scene.backgroundNode = backgroundNode;
+
+            // renderer
+
+            renderer = new WebGPURenderer({ antialias: true });
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setAnimationLoop(render);
+            container.appendChild(renderer.domElement);
+
+            window.addEventListener('resize', onWindowResize);
+
+            if (playbackState && !playbackState.paused) {
+                await playAudioBuffer();
+            }
+
+        }
+
+        function onWindowResize() {
+
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+
+            renderer.setSize(window.innerWidth, window.innerHeight);
+
+        }
+
+        function render() {
+            if (currentAnalyser) {
+                currentAnalyser.getByteFrequencyData(analyserBuffer);
+                analyserTexture.needsUpdate = true;
+                const delta = clock.getDelta();
+  time += delta * 0.5;
+
+  
+  
+
+  const numBlobs = Math.floor(energy * 50);
+  const speed = loudness * 2;
+
+  updateCubes(effect, time, numBlobs, true, false, false);
+
+                // Modify the visual effects based on the audio features
+                const energy = playbackState.track_window.current_track.energy;
+                const loudness = playbackState.track_window.current_track.loudness;
+
+                // Example: Adjust the pitch based on the energy
+                pitch.value = 0.5 + energy * 1.5;
+
+                // Example: Adjust the delay volume based on the loudness
+                delayVolume.value = loudness * 0.5;
+
+                // Example: Adjust the background color based on the energy
+                const hue = energy * 360;
+                const backgroundColor = new THREE.Color(`hsl(${hue}, 100%, 50%)`);
+                scene.background = backgroundColor;
+            }
+
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+
+</html>

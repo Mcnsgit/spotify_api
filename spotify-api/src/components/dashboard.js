@@ -4,7 +4,6 @@ import useSpotifyApi from '../auth/useSpotifyApi';
 import SearchComponent from './searchComponent';
 import AudioVisualiser from './AudioVisualiser';
 import { Container, Row, Col } from 'react-bootstrap';
-import AudioPlaylist from './AudioPlaylist';
 import SpotifyPlayer from './spotifyPlayer';
 import '../App.css'
 import './spotifyPlayer.css';
@@ -62,16 +61,30 @@ const Dashboard = () => {
                           />
                         )}
                       </div>
-                    </div>
+                    </div>``
                   </div>
                 </Container>
   </Col>
 </Row>
-      <Row>
-        <Col>
-          <AudioPlaylist />
-        </Col>
-      </Row>
+
+<Row>
+  <Col>
+    <Container>
+      <div className="flex">
+        <div>
+          <div className="w-64 h-64">
+            {currentTrackId && (
+              <AudioVisualiser
+                token={localStorage.getItem('accessToken')}
+                trackId={currentTrackId}
+              />
+            )}
+          </div>
+        </div>
+      </div>
+    </Container>
+  </Col>
+</Row>
       <Row>
         <Col>
           <SpotifyPlayer />

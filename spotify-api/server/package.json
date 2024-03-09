@@ -1,9 +1,14 @@
 {
   "name": "server",
+  "homepage": "https://mcnsgit.github.io/spotify-api/",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
+    "dev": "nodemon index.js",
+    "build": "next build",
+    "deploy": "gh-pages -d public",
+    "predeploy": "npm run start",
     "start": "node index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
