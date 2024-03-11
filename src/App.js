@@ -1,34 +1,33 @@
-// App.js
 import React, { useEffect, useState } from 'react';
-import Dashboard from './components/dashboard';
+import { SpotifyPlayerProvider } from './components/spotifyPlayerContex';
 import Login from './login';
+import Dashboard from './components/dashboard';
 import useSpotifyApi from './auth/useSpotifyApi';
 import SpotifyPlayer from './components/spotifyPlayer';
-import { SpotifyPlayerProvider } from './components/spotifyPlayerContex';
 
 const App = () => {
-  const accessToken = localStorage.getItem('accessToken');
+  const [accessToken, setAccessToken] = useState(() => localStorage.getItem('accessToken'));
+
   const { callApi } = useSpotifyApi();
-  const [token, setToken] = useState(localStorage.getItem('accessToken'));
 
   useEffect(() => {
-    if (token) {
-      callApi('me').then(data => {
-        if (!data) {
-          setToken(null);
-          localStorage.removeItem('accessToken');
+    const checkValidToken = async () => {
+      if (accessToken) {
+        const userData = await callApi('me');
+        if (!userData) {
+          setAccessToken(null);
         }
-      });
-    }
-  }, [callApi, token]);
+      }
+    };
+
+    checkValidToken();
+  }, [accessToken, callApi]);
 
   return (
-    <div className="App">
-      <SpotifyPlayerProvider accessToken={accessToken}>
-        {token ? <Dashboard /> : <Login />}
-        {accessToken && <SpotifyPlayer />}
-      </SpotifyPlayerProvider>
-    </div>
+    <SpotifyPlayerProvider accessToken={accessToken}>
+      {accessToken ? <Dashboard /> : <Login />}
+      {accessToken && <SpotifyPlayer />}
+    </SpotifyPlayerProvider>
   );
 };
 

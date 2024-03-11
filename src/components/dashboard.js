@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import useSpotifyApi from '../auth/useSpotifyApi';
 import SearchComponent from './searchComponent';
-import AudioVisualiser from './AudioVisualiser';
 import { Container, Row, Col } from 'react-bootstrap';
 import SpotifyPlayer from './spotifyPlayer';
-import '../App.css'
+import '../App.css';
 import './spotifyPlayer.css';
 
 const Dashboard = () => {
@@ -26,9 +25,11 @@ const Dashboard = () => {
     }
   }, [userProfile, requestPlaybackPermissions]);
 
-  const handleTrackChange = (trackId) => {
-    setCurrentTrackId(trackId);
+  const handleTrackChange = (TrackId) => {
+    setCurrentTrackId(TrackId);
   };
+
+  const accessToken = localStorage.getItem('accessToken');
 
   return (
     <Container>
@@ -36,10 +37,10 @@ const Dashboard = () => {
         <Col>
           <h1 className="text-3xl font-bold mb-4">User Dashboard</h1>
           {userProfile && (
-            <div>
-              <p className="text-lg">Welcome, {userProfile.display_name}</p>
-            </div>
-          )}
+           <div>
+           <p className="text-lg">Welcome, {userProfile.display_name}</p>
+         </div>
+       )}
         </Col>
       </Row>
       <Row>
@@ -48,42 +49,11 @@ const Dashboard = () => {
         </Col>
       </Row>
       <Row>
-  <Col>
-  <Container>
-                  <div className="flex">
-                    <div>
-                      <div className="w-64 h-64">
-                        {currentTrackId && (
-                          <AudioVisualiser
-                            token={localStorage.getItem('accessToken')}
-                            trackId={currentTrackId}
-                          />
-                        )}
-                      </div>
-                    </div>``
-                  </div>
-                </Container>
-  </Col>
-</Row>
-
-<Row>
-  <Col>
-    <Container>
-      <div className="flex">
-        <div>
-          <div className="w-64 h-64">
-            {currentTrackId && (
-              <AudioVisualiser
-                token={localStorage.getItem('accessToken')}
-                trackId={currentTrackId}
-              />
-            )}
-          </div>
-        </div>
-      </div>
-    </Container>
-  </Col>
-</Row>
+        <Col>
+          <div className="player-container">{currentTrackId && <SpotifyPlayer accessToken={accessToken} trackId={currentTrackId} />
+          }</div>        
+          </Col>
+      </Row>
       <Row>
         <Col>
           <SpotifyPlayer />

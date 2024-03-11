@@ -1,8 +1,7 @@
 <html lang="en">
-
-<head>
-    <title>three.js - WebGPU - Audio Processing</title>
+<head>   
     <meta charset="utf-8">
+    <title>three.js - WebGPU - Audio Processing</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link type="text/css" rel="stylesheet" href="main.css">
 </head>
@@ -74,14 +73,10 @@
         }
 
         async function init() {
-
-            if ( WebGPU.isAvailable() === false ) {
-
-             	document.body.appendChild( WebGPU.getErrorMessage() );
-
-             	throw new Error( 'No WebGPU support' );
-
-             }
+            if (WebGPU.isAvailable() === false) {
+            document.body.appendChild(WebGPU.getErrorMessage());
+            throw new Error('No WebGPU support');
+        }
             const resolution = 28;
             const effect = new MarchingCubes(resolution, materials.multiColors, true, true, 100000);
             effect.position.set(0, 0, 0);
